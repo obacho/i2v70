@@ -42,6 +42,20 @@ CONFIGS = {
         "use_last_video_frame": False,
         "output": "opa_ff_final.mp4",
     },
+    "opa_singlemove": {
+        "image": "opa.jpg",
+        "width": 620,
+        "height": 760,
+        "timeline": [
+            ("still", 5),
+            ("clip", "opa1.mp4"),
+            ("still", 5),            
+        ],
+        "use_first_frame": False,
+        "use_next_video_frame": False,
+        "use_last_video_frame": True,
+        "output": "opa_singlemove.mp4",
+    },    
     "braut": {
         "image": "braut.jpg",
         "width": 890,
@@ -58,10 +72,45 @@ CONFIGS = {
         "use_last_video_frame": False,
         "output": "braut_final.mp4",
     },
+    "omifamilie": {
+        "image": "omifamilie.jpg",
+        "width": 1024,
+        "height": 854,
+        "timeline": [
+            ("still", 5),
+            ("clip", "omifamilie_wave.mp4"),
+            ("clip", "omifamilie_wave_reversed.mp4"),            
+            ("still", 15),
+        ],
+        "use_first_frame": True,
+        "use_next_video_frame": False,
+        "use_last_video_frame": False,
+        "output": "omifamilie_final.mp4",
+    },    
+    "parkbank": {
+        "image": "parkbank.jpg",
+        "width": 1100,
+        "height": 936,
+        "timeline": [
+            ("still", 5),
+            ("clip", "parkbank_bike.mp4"),
+            ("still", 3),
+            ("clip", "parkbank_nosedigger.mp4"),
+            ("still", 3),
+            ("clip", "parkbank_renate_leaves.mp4"),
+            ("still", 3),
+            ("clip", "parkbank_legs.mp4"),
+            ("still", 5),
+        ],
+        "use_first_frame": True,
+        "use_next_video_frame": True,
+        "use_last_video_frame": False,
+        "output": "parkbank_final.mp4",
+    },     
 }
 
 # Select which config to use
-ACTIVE_CONFIG = "braut"
+ACTIVE_CONFIG = "omifamilie"
 
 # Apply the selected configuration
 config = CONFIGS[ACTIVE_CONFIG]
@@ -100,6 +149,14 @@ def get_first_video():
         if kind == "clip":
             return value
     return None
+    
+def get_next_video(index):
+    """Find the next video clip after the given index in the timeline"""
+    for i in range(index + 1, len(TIMELINE)):
+        kind, value = TIMELINE[i]
+        if kind == "clip":
+            return value
+    return None    
 
 def get_previous_video(index):
     """Find the previous video clip before the given index in the timeline"""
