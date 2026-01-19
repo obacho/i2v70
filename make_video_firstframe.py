@@ -83,6 +83,10 @@ WORKDIR = "_work"
 # -----------------------------
 def run(cmd):
     print("▶", " ".join(cmd))
+    # Add -loglevel error to ffmpeg commands to reduce verbosity
+    if cmd[0] == "ffmpeg":
+        cmd.insert(1, "-loglevel")
+        cmd.insert(2, "error")
     subprocess.run(cmd, check=True)
 
 def ensure_ffmpeg():
