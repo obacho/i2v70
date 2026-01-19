@@ -24,6 +24,7 @@ CONFIGS = {
         ],
         "use_first_frame": True,
         "use_next_video_frame": True,
+        "use_last_video_frame": False,
         "output": "päda_ff_final.mp4",
     },
     "opa": {
@@ -38,6 +39,7 @@ CONFIGS = {
         ],
         "use_first_frame": True,
         "use_next_video_frame": True,
+        "use_last_video_frame": False,
         "output": "opa_ff_final.mp4",
     },
     "braut": {
@@ -53,6 +55,7 @@ CONFIGS = {
         ],
         "use_first_frame": False,
         "use_next_video_frame": False,
+        "use_last_video_frame": False,
         "output": "braut_final.mp4",
     },
 }
@@ -68,6 +71,7 @@ image_height = config["height"]
 TIMELINE = config["timeline"]
 USE_FIRST_FRAME = config["use_first_frame"]
 USE_NEXT_VIDEO_FRAME = config["use_next_video_frame"]
+USE_LAST_VIDEO_FRAME = config["use_last_video_frame"]
 OUTPUT = config["output"]
 
 FPS = 30
@@ -93,9 +97,9 @@ def get_first_video():
             return value
     return None
 
-def get_next_video(index):
-    """Find the next video clip after the given index in the timeline"""
-    for i in range(index + 1, len(TIMELINE)):
+def get_previous_video(index):
+    """Find the previous video clip before the given index in the timeline"""
+    for i in range(index - 1, -1, -1):
         kind, value = TIMELINE[i]
         if kind == "clip":
             return value
@@ -105,6 +109,17 @@ def extract_first_frame(video_path, output_name):
     """Extract first frame from a video"""
     run([
         "ffmpeg", "-y",
+        "-i", video_path,
+        "-vf", f"scale={RESOLUTION}:force_original_aspect_ratio=increase,crop={RESOLUTION}",
+        "-frames:v", "1",
+        output_name
+    ])
+
+def extract_last_frame(video_path, output_name):
+    """Extract last frame from a video"""
+    run([
+        "ffmpeg", "-y",
+        "-sseof", "-0.1",  # Seek to 0.1 seconds before end
         "-i", video_path,
         "-vf", f"scale={RESOLUTION}:force_original_aspect_ratio=increase,crop={RESOLUTION}",
         "-frames:v", "1",
@@ -124,9 +139,9 @@ for f in os.listdir("."):
         os.remove(f)
 
 # -----------------------------
-# DETERMINE SOURCE IMAGE (for master still if not using next video frames)
+# DETERMINE SOURCE IMAGE (for master still if not using next/last video frames)
 # -----------------------------
-if not USE_NEXT_VIDEO_FRAME:
+if not USE_NEXT_VIDEO_FRAME and not USE_LAST_VIDEO_FRAME:
     if USE_FIRST_FRAME:
         first_video = get_first_video()
         if not first_video:
@@ -190,7 +205,7 @@ for idx, (kind, value) in enumerate(TIMELINE):
                     out
                 ])
             else:
-                # No next video found, use master still or fallback image
+                # No next video found, use fallback
                 print(f"⚠️  No next video found for still {still_index}, using fallback")
                 if USE_FIRST_FRAME:
                     first_video = get_first_video()
@@ -210,6 +225,49 @@ for idx, (kind, value) in enumerate(TIMELINE):
                     "-pix_fmt", "yuv420p",
                     out
                 ])
+        
+        elif USE_LAST_VIDEO_FRAME:
+            # Find the previous video in the timeline
+            prev_video = get_previous_video(idx)
+            
+            if prev_video:
+                print(f"🖼️  Creating still from last frame of previous video: {prev_video}")
+                # Extract last frame from previous video
+                frame_img = f"frame_still_{still_index}.jpg"
+                extract_last_frame(os.path.join("..", prev_video), frame_img)
+                
+                # Create still video from that frame
+                run([
+                    "ffmpeg", "-y",
+                    "-loop", "1",
+                    "-i", frame_img,
+                    "-t", str(value),
+                    "-r", str(FPS),
+                    "-pix_fmt", "yuv420p",
+                    out
+                ])
+            else:
+                # No previous video found, use fallback
+                print(f"⚠️  No previous video found for still {still_index}, using fallback")
+                if USE_FIRST_FRAME:
+                    first_video = get_first_video()
+                    frame_img = f"frame_still_{still_index}.jpg"
+                    extract_first_frame(os.path.join("..", first_video), frame_img)
+                    source = frame_img
+                else:
+                    source = os.path.join("..", IMAGE)
+                
+                run([
+                    "ffmpeg", "-y",
+                    "-loop", "1",
+                    "-i", source,
+                    "-t", str(value),
+                    "-r", str(FPS),
+                    "-vf", f"scale={RESOLUTION}",
+                    "-pix_fmt", "yuv420p",
+                    out
+                ])
+        
         else:
             # Old method: use master still
             run([
